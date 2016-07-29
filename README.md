@@ -1,5 +1,5 @@
 # EnwiktionaryDanishMorphologicalParser
-This project produces a textual morphological table for each Danish word listed into enwiktionary.
+This project consists into an automatic tool for parsing *enwiktionary* in order to produce morphological tables for the listed Danish words.
 
 It has been developed for an academic examination, and in particular all the files that are outside of the **"da"** folder have been made by my instructors.
 
