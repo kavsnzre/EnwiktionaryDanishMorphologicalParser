@@ -52,7 +52,7 @@ For example for the *pseudonym* word the pseudo code is the following one:
 
 For knowing how you can get this file please see below.
 
-# Getting start (for Linux)
+# Getting started (for Linux)
 * download the current  **enwiktionary dump**:
   * go here: *https://dumps.wikimedia.org/backup-index.html*
   * look for *"enwiktionary"*; you'll try a link like this: **"yyyy-mm-dd hh:mm:ss enwiktionary: Dump complete|Partial dump"**; click on it!
