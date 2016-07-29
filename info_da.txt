@@ -1,0 +1,128 @@
+/* 
+ * Project of the group formed by: 
+ *   Michele Cirillo - 1727645 - cirillo.1727645@studenti.uniroma1.it
+ *   Francesco Del Duchetto - 1721971 - francescodelduchetto@gmail.com
+ */
+
+- Name of Wiktionary dump: enwiktionary-20160407-pages-articles.xml.bz2
+IMPORTANT: the below statistics refer to the dump released at time 2016-04-08 08:42:44
+
+- Template/grammar rules source: 
+	1) Danish headword-line templates
+		link: https://en.wiktionary.org/wiki/Category:Danish_headword-line_templates
+	2) "Danish. An essential grammar" textbook, Robin Allan et al.
+	3) Online Danish Verb Conjugator
+		link: http://www.101languages.net/danish/danish-verb-conjugator/
+	4) "Danish grammar" page of Wikipedia
+		link: https://en.wikipedia.org/wiki/Danish_grammar   
+
+- Number of lemma#pos entries covered: 7843
+- Number of lemma#pos entries existing in Wiktionary: 7935
+- Coverage: 98.841%
+	NOTICE: In the count we had not considered pages that contains a morphological form (those pages that doesn't have a lemma as the argument of <title> tag but an inflection).
+	NOTICE: the remaining percentage (about 1.2%) is a mix of "irregular but correct" templates and "irregular and to ignore" ones; e.g.:
+		- example of "irregular and to ignore" template:
+				{{head|da|verb}} ''?'' (''please give all verb forms'')
+		- example of "irregular but correct" template: 
+				'''nettet''' ''(only used in singular definite)''
+	Because this 1.2% is composed by just 92 templates among the entire dump, we ignored these cases.
+
+- Total number of morphological forms retrieved (including lemmas): 51205
+
+	NOTICE: The number of morphological forms varies even inside a POS category; for example:
+		- some names have only the singular or the plural form
+		- some verbs are not transitive and so they haven't the passive form
+		- some adjectives are uncomparable
+
+////////////////////////////////////////////////// WORKING PRINCIPLE /////////////////////////////////////////////////
+
+The kernel of the algorithm is into the "DanishPatterns.checkMorphoEntry()" method and into the classes of the "da.pos" package:
+every time a POS is found, a switch-case permits to have a different behaviour depending on the type of POS considered. In particular:
+
+	A) For POS that haven't morphological forms by definition (e.g., ADVERBS, PROPER NOUNS), the program makes some checks 
+	   about the regularity of the template and if the result is good then a new MorphoEntry is produced.
+
+	B) At the end of the output file there are all pronouns, that are added manually because there's not regularity into their templates.
+
+	C) If the POS is a NAME then the program uses temporarily a stack because some nouns have a template both after "==Nouns==" and
+	   after "==Inflection==" (and sometimes also after "==Declension==").
+	   Because the template after "==Inflection=="/"==Declension==" is better thant the other one:
+		- every time the program find a "==Noun==" template it pushes this template into the stack 
+		- but every time the program finds a "==Inflection=="/"==Declension==" template it pops the last "==Noun==" template and replaces it with the new template by a push operation. 
+	For example:
+	   
+	   ==Danish==
+	   ...
+	   ==Noun==
+	   {{A}}
+	   ...
+	   ==Noun==
+	   {{B1}}
+	   ...
+	   ==Inflection==
+	   {{B2}}
+	   
+	   State evolution of the stack:
+	  	 - push {{A}}
+	  	 - push {{B1}}
+	  	 - pop {{B1}}
+	  	 - push {{B2}}
+	   
+	   Obviously this is just the work principle, a more accurate algorithm is implemented in the code. The same idea is implemented for VERBS that also have duplicate template, in particular after "==Verb==" and after "==Conjugation==".
+
+	D) Because there's not a single type of template for NOUNS, VERBS and ADVERBS, for each of them we have different template parsers. 
+	For doing this we implemented the methods "createAllFlections(String lemma, String template)"  in classes da.pos.Noun, da.pos.Verb and da.pos.Adective; these methods:
+		1) return null if they recogninze the the considered template:
+			- hasn't informations (e.g. "\{\{head\|da\|noun\}\}") or refers to an inflection (e.g. "\{\{head\|da\|noun form(.*)" )
+			- has a very rare irregular form (this occurrence will produce the 1.2% of ignored templates)
+		2) else recognize the type of the considered templates and applies the suitable parser in order to extract all flessions (sometimes we have implemented also custom rules)
+
+	# For NOUNS regular templates can be clustered into:
+	  	   - PLURAL ONLY: "\{\{head\|da\|noun(.*)plural only\}\}" and similar;
+	  	   - SINGULAR ONLY: "\{\{head\|da\|noun\|indeclinable\}\}" and similar;
+	  	   - REGULAR CASES, related to this condition:
+	  	  	 - template.matches("(.)*(\\|g(2)?=(n|c)){1,2}(.)*")
+	  	  	 - template.startsWith("{{da-noun-infl|")
+	  	  	 - template.matches("\\{\\{da-noun(\\|(g(2)?\\=(n|c)))+\\}\\}"
+	  	  	 - template.startsWith("{{da-noun|")
+	  	  	 - template.matches("\\{\\{head\\|da\\|noun(\\|(g(2)?\\=(n|c)))+\\}\\}")
+	  	  	 - template.matches("\\{\\{head\\|da\\|noun(\\|((g(2)?=(n|c))|("
+	  	  			 + "definite singular|singular definite|definite|"
+	  	  			 + "definite plural|plural definite|"
+	  	  			 + "indefinite plural|plural indefinite|plural|"
+	  	  			 + "genitive|"
+	  	  			 + "abbreviation|"
+	  	  			 + "or)\\|[^\\|=]*))+")
+	  	  	 NOTICE: this last condition use a not efficient regular expression, but this choice permits to use a very useful HashMap in order to extract informations.
+         
+	     SAMPLE PSEUDO-CODE:
+	     if(template is regular){
+	  	   if(template is plural only){
+	  	  	 // creating morphological forms by extracting infos and by custom rules
+			return new DanishMorphoRuleNoun(...);
+	  	   } else if( template is singular only ){
+	  	  	 // creating morphological forms by extracting infos and by custom rules
+			return new DanishMorphoRuleNoun(...);
+	  	   } else if( template is the first regular case ){
+	  	  	 // creating morphological forms by extracting infos and by custom rules
+			return new DanishMorphoRuleNoun(...);
+	  	   } else if
+	  	   ........
+	  	   } else if(template is the last regular case ){
+	  	  	 // creating morphological forms by extracting infos and by custom rules
+			return new DanishMorphoRuleNoun(...);
+	  	   } else{
+	  	  	 // about 50 cases
+			return null;
+	  	   }
+	     } else{
+	  	   // templates without informations or referring to an inflection
+		   return null;
+	     }
+
+	# For VERBS and ADJECTIVES it has been made similarly.
+	In particular all the passive forms are obtained by a custom rule (at least 20% more flections thanks to this further work!)
+
+NOTA BENE: We have included all POS that are present in enWiktionary, so we have modified also these files in order to complete the MorphoEntry.POS enumeration:
+	- MorphoEntry$POS.class 
+	- MorphoEntry.class
